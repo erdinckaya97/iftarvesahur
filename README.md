@@ -1,4 +1,4 @@
 # iftarvesahur
-Türkiyede seçtiğiniz şehirde iftar ve sahur için geri sayım oluşturur.
+İftar ve Sahur için geri sayım aracı.
 
 Demo: https://erdinckaya97.github.io/iftarvesahur/
