@@ -2,12 +2,19 @@ const aktifVakitElement = document.getElementById('aktif-vakit');
 const sehirlerElement = document.getElementById('sehirler');
 let sayacId;
 
-const API_KEY = "your_token"; // CollectAPI token'ınızı buraya yazın
+// Şehir bilgileri
+const sehirler = {
+    "İstanbul": { ulke: "Turkey", sehir: "Istanbul" },
+    "Ankara": { ulke: "Turkey", sehir: "Ankara" },
+    "İzmir": { ulke: "Turkey", sehir: "Izmir" },
+    "Bursa": { ulke: "Turkey", sehir: "Bursa" },
+    "Antalya": { ulke: "Turkey", sehir: "Antalya" }
+};
 
 // Sayfa yüklendiğinde İstanbul'u otomatik seç
 window.addEventListener('DOMContentLoaded', (event) => {
-    sehirlerElement.value = "istanbul";
-    vakitleriGuncelle("istanbul");
+    sehirlerElement.value = "İstanbul";
+    vakitleriGuncelle("İstanbul");
 });
 
 sehirlerElement.addEventListener('change', function() {
@@ -22,21 +29,22 @@ function vakitleriGuncelle(sehir) {
         clearInterval(sayacId);
     }
 
-    fetch(`https://api.collectapi.com/pray/all?data.city=${sehir}`, {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `apikey ${API_KEY}`
-        }
-    })
+    const sehirBilgi = sehirler[sehir];
+    const bugun = new Date();
+    
+    // Aladhan API'si için URL oluştur
+    const apiUrl = `https://api.aladhan.com/v1/timingsByCity/${bugun.getDate()}-${bugun.getMonth() + 1}-${bugun.getFullYear()}?city=${sehirBilgi.sehir}&country=${sehirBilgi.ulke}&method=13`;
+
+    fetch(apiUrl)
         .then(response => response.json())
         .then(data => {
-            const vakitler = data.result;
+            const vakitler = data.data.timings;
             
             const sahurVakti = new Date();
             const iftarVakti = new Date();
             
-            const [sahurSaat, sahurDakika] = vakitler[0].Imsak.split(':');
-            const [iftarSaat, iftarDakika] = vakitler[0].Aksam.split(':');
+            const [sahurSaat, sahurDakika] = vakitler.Fajr.split(':');
+            const [iftarSaat, iftarDakika] = vakitler.Maghrib.split(':');
             
             sahurVakti.setHours(parseInt(sahurSaat), parseInt(sahurDakika), 0);
             iftarVakti.setHours(parseInt(iftarSaat), parseInt(iftarDakika), 0);
@@ -44,9 +52,28 @@ function vakitleriGuncelle(sehir) {
             // Eğer vakit geçmişse, sonraki güne ayarla
             if (sahurVakti < new Date()) {
                 sahurVakti.setDate(sahurVakti.getDate() + 1);
+                // Sonraki günün vakitlerini al
+                const sonrakiGun = new Date(bugun);
+                sonrakiGun.setDate(sonrakiGun.getDate() + 1);
+                fetch(`https://api.aladhan.com/v1/timingsByCity/${sonrakiGun.getDate()}-${sonrakiGun.getMonth() + 1}-${sonrakiGun.getFullYear()}?city=${sehirBilgi.sehir}&country=${sehirBilgi.ulke}&method=13`)
+                    .then(response => response.json())
+                    .then(sonrakiData => {
+                        const [yeniSaat, yeniDakika] = sonrakiData.data.timings.Fajr.split(':');
+                        sahurVakti.setHours(parseInt(yeniSaat), parseInt(yeniDakika), 0);
+                    });
             }
+
             if (iftarVakti < new Date()) {
                 iftarVakti.setDate(iftarVakti.getDate() + 1);
+                // Sonraki günün vakitlerini al
+                const sonrakiGun = new Date(bugun);
+                sonrakiGun.setDate(sonrakiGun.getDate() + 1);
+                fetch(`https://api.aladhan.com/v1/timingsByCity/${sonrakiGun.getDate()}-${sonrakiGun.getMonth() + 1}-${sonrakiGun.getFullYear()}?city=${sehirBilgi.sehir}&country=${sehirBilgi.ulke}&method=13`)
+                    .then(response => response.json())
+                    .then(sonrakiData => {
+                        const [yeniSaat, yeniDakika] = sonrakiData.data.timings.Maghrib.split(':');
+                        iftarVakti.setHours(parseInt(yeniSaat), parseInt(yeniDakika), 0);
+                    });
             }
 
             sayacId = setInterval(() => {
@@ -58,16 +85,18 @@ function vakitleriGuncelle(sehir) {
                     aktifVakitElement.innerHTML = `
                         <div class="vakit-card">
                             <div class="vakit-baslik">Sahur Vakti</div>
-                            <div class="vakit-saat">${vakitler[0].Imsak}</div>
+                            <div class="vakit-saat">${vakitler.Fajr}</div>
                             <div class="geri-sayim">${formatSure(sahuraKalanSure)}</div>
+                            <div class="sehir-bilgisi">${sehir}</div>
                         </div>
                     `;
                 } else {
                     aktifVakitElement.innerHTML = `
                         <div class="vakit-card">
                             <div class="vakit-baslik">İftar Vakti</div>
-                            <div class="vakit-saat">${vakitler[0].Aksam}</div>
+                            <div class="vakit-saat">${vakitler.Maghrib}</div>
                             <div class="geri-sayim">${formatSure(iftaraKalanSure)}</div>
+                            <div class="sehir-bilgisi">${sehir}</div>
                         </div>
                     `;
                 }
