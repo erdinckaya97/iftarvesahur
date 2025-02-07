@@ -2,17 +2,12 @@ const aktifVakitElement = document.getElementById('aktif-vakit');
 const sehirlerElement = document.getElementById('sehirler');
 let sayacId;
 
-// Şehir koordinatları
-const sehirler = {
-    "İstanbul": { lat: 41.0082, lng: 28.9784 },
-    "Ankara": { lat: 39.9306, lng: 32.7439 },
-    "İzmir": { lat: 38.4237, lng: 27.1428 }
-};
+const API_KEY = "your_token"; // CollectAPI token'ınızı buraya yazın
 
 // Sayfa yüklendiğinde İstanbul'u otomatik seç
 window.addEventListener('DOMContentLoaded', (event) => {
-    sehirlerElement.value = "İstanbul";
-    vakitleriGuncelle("İstanbul");
+    sehirlerElement.value = "istanbul";
+    vakitleriGuncelle("istanbul");
 });
 
 sehirlerElement.addEventListener('change', function() {
@@ -27,24 +22,21 @@ function vakitleriGuncelle(sehir) {
         clearInterval(sayacId);
     }
 
-    const koordinat = sehirler[sehir];
-    
-    // Önce şehir bilgisini al
-    fetch(`https://vakit.vercel.app/api/nearByPlaces?lat=${koordinat.lat}&lng=${koordinat.lng}&lang=tr`)
-        .then(response => response.json())
-        .then(yerler => {
-            const sehirId = yerler[0].id; // İlk sonucu kullan
-            
-            // Şehir ID'si ile vakitleri al
-            return fetch(`https://vakit.vercel.app/api/timings/${sehirId}`);
-        })
+    fetch(`https://api.collectapi.com/pray/all?data.city=${sehir}`, {
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `apikey ${API_KEY}`
+        }
+    })
         .then(response => response.json())
         .then(data => {
+            const vakitler = data.result;
+            
             const sahurVakti = new Date();
             const iftarVakti = new Date();
             
-            const [sahurSaat, sahurDakika] = data.timings.Fajr.split(':');
-            const [iftarSaat, iftarDakika] = data.timings.Maghrib.split(':');
+            const [sahurSaat, sahurDakika] = vakitler[0].Imsak.split(':');
+            const [iftarSaat, iftarDakika] = vakitler[0].Aksam.split(':');
             
             sahurVakti.setHours(parseInt(sahurSaat), parseInt(sahurDakika), 0);
             iftarVakti.setHours(parseInt(iftarSaat), parseInt(iftarDakika), 0);
@@ -66,7 +58,7 @@ function vakitleriGuncelle(sehir) {
                     aktifVakitElement.innerHTML = `
                         <div class="vakit-card">
                             <div class="vakit-baslik">Sahur Vakti</div>
-                            <div class="vakit-saat">${data.timings.Fajr}</div>
+                            <div class="vakit-saat">${vakitler[0].Imsak}</div>
                             <div class="geri-sayim">${formatSure(sahuraKalanSure)}</div>
                         </div>
                     `;
@@ -74,7 +66,7 @@ function vakitleriGuncelle(sehir) {
                     aktifVakitElement.innerHTML = `
                         <div class="vakit-card">
                             <div class="vakit-baslik">İftar Vakti</div>
-                            <div class="vakit-saat">${data.timings.Maghrib}</div>
+                            <div class="vakit-saat">${vakitler[0].Aksam}</div>
                             <div class="geri-sayim">${formatSure(iftaraKalanSure)}</div>
                         </div>
                     `;
