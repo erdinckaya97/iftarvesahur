@@ -21,7 +21,7 @@ function vakitleriGuncelle(sehir) {
         clearInterval(sayacId);
     }
 
-    fetch(`https://iftaranekadarkaldi.com/sehir/5041/istanbul-iftar-saati`)
+fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://iftaranekadarkaldi.com/sehir/5041/istanbul-iftar-saati')}`)
         .then(response => response.text())
         .then(html => {
             // HTML içeriğini parse etmek için bir DOM parser kullanıyoruz
