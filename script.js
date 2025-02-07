@@ -2,10 +2,11 @@ const aktifVakitElement = document.getElementById('aktif-vakit');
 const sehirlerElement = document.getElementById('sehirler');
 let sayacId;
 
-const sehirKodlari = {
-    "İstanbul": "9541",
-    "Ankara": "9206",
-    "İzmir": "9560"
+// Şehir koordinatları
+const sehirler = {
+    "İstanbul": { lat: 41.0082, lng: 28.9784 },
+    "Ankara": { lat: 39.9306, lng: 32.7439 },
+    "İzmir": { lat: 38.4237, lng: 27.1428 }
 };
 
 // Sayfa yüklendiğinde İstanbul'u otomatik seç
@@ -26,38 +27,24 @@ function vakitleriGuncelle(sehir) {
         clearInterval(sayacId);
     }
 
-    const sehirKodu = sehirKodlari[sehir];
-    const bugun = new Date();
-    const yil = bugun.getFullYear();
-    const ay = String(bugun.getMonth() + 1).padStart(2, '0');
-    const gun = String(bugun.getDate()).padStart(2, '0');
-
-    // API isteği için gerekli headers
-    const requestOptions = {
-        method: 'GET',
-        headers: {
-            'Accept': 'application/json, text/plain, */*',
-            'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
-            'Connection': 'keep-alive',
-            'Referer': 'https://awqatsalah.diyanet.gov.tr/',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-origin',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-        }
-    };
-
-    fetch(`https://awqatsalah.diyanet.gov.tr/api/timesOfDay?region=${sehirKodu}&date=${yil}-${ay}-${gun}`, requestOptions)
+    const koordinat = sehirler[sehir];
+    
+    // Önce şehir bilgisini al
+    fetch(`https://vakit.vercel.app/api/nearByPlaces?lat=${koordinat.lat}&lng=${koordinat.lng}&lang=tr`)
+        .then(response => response.json())
+        .then(yerler => {
+            const sehirId = yerler[0].id; // İlk sonucu kullan
+            
+            // Şehir ID'si ile vakitleri al
+            return fetch(`https://vakit.vercel.app/api/timings/${sehirId}`);
+        })
         .then(response => response.json())
         .then(data => {
-            const vakitler = data[0]; // İlk eleman günün vakitlerini içeriyor
-            
             const sahurVakti = new Date();
             const iftarVakti = new Date();
             
-            // API'den gelen vakitleri kullan
-            const [sahurSaat, sahurDakika] = vakitler.fajr.split(':');
-            const [iftarSaat, iftarDakika] = vakitler.maghrib.split(':');
+            const [sahurSaat, sahurDakika] = data.timings.Fajr.split(':');
+            const [iftarSaat, iftarDakika] = data.timings.Maghrib.split(':');
             
             sahurVakti.setHours(parseInt(sahurSaat), parseInt(sahurDakika), 0);
             iftarVakti.setHours(parseInt(iftarSaat), parseInt(iftarDakika), 0);
@@ -79,7 +66,7 @@ function vakitleriGuncelle(sehir) {
                     aktifVakitElement.innerHTML = `
                         <div class="vakit-card">
                             <div class="vakit-baslik">Sahur Vakti</div>
-                            <div class="vakit-saat">${vakitler.fajr}</div>
+                            <div class="vakit-saat">${data.timings.Fajr}</div>
                             <div class="geri-sayim">${formatSure(sahuraKalanSure)}</div>
                         </div>
                     `;
@@ -87,7 +74,7 @@ function vakitleriGuncelle(sehir) {
                     aktifVakitElement.innerHTML = `
                         <div class="vakit-card">
                             <div class="vakit-baslik">İftar Vakti</div>
-                            <div class="vakit-saat">${vakitler.maghrib}</div>
+                            <div class="vakit-saat">${data.timings.Maghrib}</div>
                             <div class="geri-sayim">${formatSure(iftaraKalanSure)}</div>
                         </div>
                     `;
