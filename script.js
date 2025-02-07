@@ -21,7 +21,7 @@
             clearInterval(sayacId);
         }
 
-        fetch(`https://api.aladhan.com/v1/timingsByCity?city=${sehir}&country=Turkey&method=kaya`)
+        fetch(`https://api.aladhan.com/v1/timingsByCity?city=${sehir}&country=Turkey&method=18`)
             .then(response => response.json())
             .then(data => {
                 const sahurVakti = new Date();
